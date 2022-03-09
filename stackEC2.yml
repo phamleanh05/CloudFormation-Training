@@ -1,0 +1,46 @@
+Description: Create EC2
+
+Mappings:
+  RegionMap:
+    us-east-2:
+      HVM64: ami-08b6f2a5c291246a0 # 64-bit x86
+
+Parameters:
+  InfrastructureStackName:
+    Type: String
+    Default: dev
+
+Resources:
+  SG:
+    Properties:
+      GroupDescription: 'Enable SSH, HTTP access'
+      GroupName: Security Group
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      VpcId: VPC  
+
+  EC2:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: !Sub '${Region}a'
+      KeyName: huynhg3-key
+      BlockDeviceMappings:
+      - DeviceName: '/dev/sda1'
+        Ebs:
+          VolumeSize: 8
+      InstanceType: t2.micro
+      ImageId: ami-08b6f2a5c291246a0 # Amazon Linux 2 AMI (64bit - x86)
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+        SubnetId:
+          Fn::ImportValue:
+            Fn::Sub: "${InfrastructureStackName}-PubSubnetA"
+  
+  

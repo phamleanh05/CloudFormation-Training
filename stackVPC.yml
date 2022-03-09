@@ -1,0 +1,120 @@
+Description: Create VPC
+
+Mappings:
+  RegionMap:
+    us-east-2:
+      HVM64: ami-08b6f2a5c291246a0 # 64-bit x86
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 172.16.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: huynhg3-vpc
+
+  PubSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Sub "${Region}a"
+      CidrBlock: 172.16.0.0/16
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: "Name"
+          Value: "huynhg3-PublicSubnet"
+      VPCId: !Ref VPC
+
+  PriSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Sub "${Region}b"
+      CidrBlock: 172.16.2.0/16
+      Tags:
+        - Key: "Name"
+          Value: "huynhg3-PrivateSubnet"
+      VpcId: !Ref VPC
+
+  IG:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: "Name"
+          Value: "huynhg3-IG"
+
+  IG-Attachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayID: !Ref IG
+      VpcId: !Ref VPC
+
+  RT:
+    Type: AWS::EC2::RouteTable
+    DependsOn:IG-Attachment 
+    Properties:
+      Tags:
+        - Key: "Name"
+          Value: "huynhg3-routetable"
+      VpcId: !Ref VPC
+  # RT Public
+  RuleRT:
+    Type: AWS::EC2:Route
+    DependsOn: IG-Attachment 
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref IG
+      RouteTableId: !Ref RT
+  # RT Private
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+
+  #Route Table Associate with Public Subnet
+  RTAforPubSubnet:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RT
+      SubnetId: !Ref PubSubnet
+
+  #Route Table Associate with Private Subnet
+  RTAforPriSubnet:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RT
+      SubnetId: !Ref PriSubnet
+
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Tags:
+        - Key: "Name"
+          Value: "EIPa"
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt ElasticIP.AllocationId
+      SubnetId: !Ref PubSubnet
+      Tags:
+        - Key: "Name"
+          Value: "NATa"
+
+Outputs:
+  VPC:
+    Description: vpc
+    Value: !Ref VPC
+    Export:
+      Name: VPC
+  PubSubnetA:
+    Description: public subnet
+    Value: !Ref PubSubnetA
+    Export:
+      Name: PubSubnetA
+  PriSubnetB:
+    Description: private subnet
+    Value: !Ref PriSubnetB
+    Export:
+      Name: PriSubnetB

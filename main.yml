@@ -1,0 +1,22 @@
+Description: Main Stack
+
+Mappings:
+  RegionMap:
+    us-east-2:
+      HVM64: ami-08b6f2a5c291246a0 # 64-bit x86
+
+Resources:
+  StackVPC:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ""
+
+  StackRDS:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ""
+
+  StackEC2:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ""

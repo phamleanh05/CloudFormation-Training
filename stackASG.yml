@@ -1,0 +1,77 @@
+Description: Create ALB
+
+Resources:
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: Target Group
+      Port: 80
+      Protocol: HTTP
+      VpcId: VPC
+      TargetType: instance
+      HealthCheckPath: "/var/www/html/index.html"
+      HealthCheckIntervalSeconds: 10
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+
+  LB:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      LoadBalancerName: LB
+      SecurityGroups:
+        - Ref: SG
+      Listeners:
+        - LoadBalancerPort: "80"
+          InstancePort: "80"
+          Protocol: HTTP
+      Subnets:
+        - Ref: PubSubnetA
+        - Ref: PriSubnetB
+      Tags:
+        - Key: Name
+          Value: huynhg3-LB
+
+  LC:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      LaunchConfigurationName: "LC"
+      KeyName: "MyUSE2KP"
+      ImageId: "ami-082b5a644766e0e6f"
+      InstanceType: "t2.micro"
+      SecurityGroups:
+        - Ref: SecurityGroupVPC
+      IamInstanceProfile:
+        Ref: InstanceProfileAylin
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd
+          systemctl start httpd.service
+          systemctl enable httpd.service
+          cd /var/www/html
+          echo "<html><h1>Hello</h1></html>" > index.html
+          chkconfig httpd on
+      BlockDeviceMappings:
+        - DeviceName: "/dev/xvda"
+          Ebs:
+            VolumeSize: "8"
+            VolumeType: "gp2"
+
+  ASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: "ASG"
+      LaunchConfigurationName: !Ref: LC
+      DesiredCapacity: "2"
+      MinSize: "2"
+      MaxSize: "2"
+      VPCZoneIdentifier:
+        - Ref: PubSubnetA
+        - Ref: PriSubnetB
+      LoadBalancerNames:
+        - !Ref: LB
+      TargetGroupARNs:
+        - !Ref TargetGroup
